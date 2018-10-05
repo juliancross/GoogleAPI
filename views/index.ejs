@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Custom Dimension Settings</title>
+</head>
+
+<body>
+
+    <button id="auth-button" hidden>Authorize</button>
+
+    <h1>Custom Dimension Settings</h1>
+
+    <h5>Please insert your Web Property ID</h5>
+
+    <div>
+        <input type="text" name="property" placeholder="Enter your Tracking ID" class='place'>
+        <button id='getProperty' class='button'>Submit</button>
+    </div>
+
+
+    <!-- <textarea cols="80" rows="20" id="query-output"></textarea> -->
+    <script>
+        // Replace with your client ID from the developer console.
+        var CLIENT_ID = 'YOUR CLIENT ID';
+
+        // Set authorized scope.
+        var SCOPES = [
+            'https://www.googleapis.com/auth/analytics.edit',
+            'https://www.googleapis.com/auth/analytics.readonly',
+            'https://www.googleapis.com/auth/analytics'
+        ];
+
+
+        function authorize(event) {
+            // Handles the authorization flow.
+            // `immediate` should be false when invoked from the button click.
+            var useImmdiate = event ? false : true;
+            var authData = {
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                immediate: useImmdiate
+            };
+
+            gapi.auth.authorize(authData, function (response) {
+                var authButton = document.getElementById('auth-button');
+                if (response.error) {
+                    authButton.hidden = false;
+                } else {
+                    authButton.hidden = true;
+                    loadGAPI();
+                }
+            });
+        }
+
+        //loading API Google Analytics
+        function loadGAPI() {
+            gapi.client.load('analytics', 'v3');
+        }
+
+        //Array construction of custom dimensions in global scope !!
+        var tab = [];
+        //Numbdr of localCustomDim you need
+        var startIndex = 10;
+
+        var localCustomDim = {
+            'name': 'localCustomDim',
+            'scope': 'HIT',
+            'active': true
+        }
+
+        //custom dimensions array
+        var CD_TO_COPY = [{
+            'name': 'plateform',
+            'scope': 'HIT',
+            'active': true
+        }, {
+            'name': 'GA Client ID',
+            'scope': 'USER',
+            'active': true
+        }, {
+            'name': 'Search Results',
+            'scope': 'HIT',
+            'active': true
+        }, {
+            'name': 'Dealer Name',
+            'scope': 'HIT',
+            'active': true
+        }, {
+            'name': 'Search Filters',
+            'scope': 'HIT',
+            'active': true
+        }, {
+            'name': 'User ID MyR CRM',
+            'scope': 'HIT',
+            'active': true
+        }];
+
+        for (var i = 0; i < startIndex; i++) {
+            tab.push(localCustomDim);
+        }
+        var finalArray = tab.concat(CD_TO_COPY)
+
+
+        ///////////////////////////////////////////////////////////////////////////////////
+        var CM_TO_COPY = [{
+            'name': 'Number of Dealer calls',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'localCm',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': false
+        }, {
+            'name': 'Number of Social Shares',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'Number of PDF/e-brochure downloads',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'localCm',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': false
+        }, {
+            'name': 'Number of Form opening',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'Number of Form validations',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'Number of Leads',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'Number of Video Plays',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'Number of Video Completions',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        }, {
+            'name': 'Number of Configuration Completions',
+            'scope': 'HIT',
+            'type': 'Integer',
+            'active': true
+        },];
+
+
+
+        // Custom dimension constructor
+        var cpt = 0;
+        var val = finalArray.length;
+
+
+        function customDimConstruction(inputTrackingValue) {
+            var accountId = inputTrackingValue.split('-')[1];
+            return new Promise(function (resolve, reject) {
+                setTimeout(function () {
+                    resolve(gapi.client.analytics.management.customDimensions.insert({
+                        'accountId': accountId,
+                        'webPropertyId': inputTrackingValue,
+                    }, body = JSON.stringify(finalArray[cpt])));
+                    reject('failure reason');
+                    cpt++
+                }, 1000);
+            })
+        }
+
+
+
+        function setCD(index, inputTrackingValue) {
+            var h5 = document.querySelector('body > h5')
+            if (index > 0) {
+                customDimConstruction(inputTrackingValue)
+                    .then(h5.innerHTML = 'Sttings done in the Web Property ' + inputTrackingValue)
+                    .then(function (data) {
+                        return setCD(index - 1, inputTrackingValue);
+                    })
+                    .catch(function (err) {
+                        console.log(err)
+                    })
+            }
+        }
+
+
+
+        // Custom metric constructor
+        var nb = 0
+        var value = CM_TO_COPY.length;
+
+        function customMetricsConstruction(inputTrackingValue) {
+            var accountId = inputTrackingValue.split('-')[1];
+            return new Promise(function (resolve, reject) {
+                setTimeout(function () {
+                    resolve(gapi.client.analytics.management.customMetrics.insert({
+                        'accountId': accountId,
+                        'webPropertyId': inputTrackingValue,
+                    }, body = JSON.stringify(CM_TO_COPY[nb])));
+                    reject('failure reason');
+                    nb++
+                }, 1000); // Peut-etre le set à 500 à voir...
+            })
+        }
+
+
+        function setCM(index, inputTrackingValue) {
+            if (index > 0) {
+                customMetricsConstruction(inputTrackingValue)
+                    .then(function (data) {
+                        return setCM(index - 1, inputTrackingValue);
+                    })
+                    .catch(function (err) {
+                        console.log(err)
+                    })
+            }
+        }
+
+
+        // Input checking
+        function setProperty(event) {
+            var inputTrackingValue = document.querySelector('body > div > input').value;
+            if (inputTrackingValue.match(/^(UA)\-([0-9]{5,})\-([0-9]{1,})/)) {
+                setCD(val, inputTrackingValue)
+                setCM(value, inputTrackingValue)
+            }
+        }
+
+
+        // Add an event listener to the 'auth-button'.
+        document.getElementById('auth-button').addEventListener('click', authorize);
+        document.getElementById('getProperty').addEventListener('click', setProperty);
+
+    </script>
+
+    <script src="https://apis.google.com/js/client.js?onload=authorize"></script>
+
+</body>
+
+</html>
